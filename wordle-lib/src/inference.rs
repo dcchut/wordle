@@ -1,10 +1,10 @@
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum InferenceKind {
-    /// This character does not appear in the word at all.
+    /// The character does not appear in the word at all.
     AbsentGlobal,
-    /// This character does not appear in the word at the same position.
+    /// The character does not appear in the word at the same position.
     AbsentLocal,
-    /// The character appears at some position (but not this one!).
+    /// The character appears at some position (but not this one).
     Present,
     /// The character appears at the position.
     Correct,
