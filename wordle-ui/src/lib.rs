@@ -142,10 +142,13 @@ impl Component for Model {
 #[wasm_bindgen(start)]
 pub fn start() {
     use js_sys::{global, Reflect};
+    wasm_logger::init(wasm_logger::Config::default());
 
     if Reflect::has(&global(), &JsValue::from_str("window")).unwrap() {
+        log::info!("Starting application");
         yew::start_app::<Model>();
     } else {
+        log::info!("Starting worker");
         crate::worker::Worker::register();
     }
 }

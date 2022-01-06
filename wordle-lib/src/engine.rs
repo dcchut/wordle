@@ -58,8 +58,7 @@ impl<const LEN: usize> Engine<LEN> {
 fn lowercase_iter(w: &'static str) -> impl Iterator<Item = usize> {
     w.chars()
         .filter(|c| c.is_ascii_alphabetic())
-        .flat_map(|c| c.to_lowercase())
-        .map(|c| ((c as u8) - b'a') as usize)
+        .map(|c| ((c.to_ascii_lowercase() as u8) - b'a') as usize)
 }
 
 #[cfg(test)]

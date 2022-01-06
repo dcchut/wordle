@@ -23,7 +23,7 @@ pub struct Inference {
 
 impl Inference {
     pub fn new(c: char, position: usize, kind: InferenceKind) -> Self {
-        Self { c, position, kind }
+        Self { c: c.to_ascii_lowercase(), position, kind }
     }
 
     pub fn char(&self) -> char {
@@ -35,9 +35,7 @@ impl Inference {
             .chars()
             .nth(self.position)
             .unwrap()
-            .to_lowercase()
-            .next()
-            .unwrap();
+            .to_ascii_lowercase();
 
         match self.kind {
             InferenceKind::AbsentGlobal => !w.contains(self.c),
