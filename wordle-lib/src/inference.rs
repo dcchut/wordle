@@ -1,4 +1,4 @@
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum InferenceKind {
     /// The character does not appear in the word at all.
     AbsentGlobal,
@@ -10,9 +10,11 @@ pub enum InferenceKind {
     Correct,
     /// The character appears this many times.
     Count(usize),
+    /// The character appears at least this many times.
+    AtLeast(usize),
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Inference {
     c: char,
     position: usize,
@@ -22,6 +24,10 @@ pub struct Inference {
 impl Inference {
     pub fn new(c: char, position: usize, kind: InferenceKind) -> Self {
         Self { c, position, kind }
+    }
+
+    pub fn char(&self) -> char {
+        self.c
     }
 
     pub fn filter(&self, w: &'static str) -> bool {
@@ -39,6 +45,7 @@ impl Inference {
             InferenceKind::Present => self.c != c && w.contains(self.c),
             InferenceKind::Correct => self.c == c,
             InferenceKind::Count(n) => w.chars().filter(|&q| q == c).count() == n,
+            InferenceKind::AtLeast(n) => w.chars().filter(|&q| q == c).count() >= n,
         }
     }
 }

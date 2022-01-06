@@ -2,16 +2,16 @@ mod tile;
 mod worker;
 
 use crate::tile::TileProps;
-use tile::{Tile, TileState};
-use yew::prelude::*;
+use crate::worker::{Board, Worker, WorkerInput, WorkerOutput};
 use serde::{Deserialize, Serialize};
-use yew_agent::{Bridge, Bridged, Threaded};
-use crate::worker::{Worker, WorkerInput, WorkerOutput};
+use tile::{Tile, TileState};
 use wasm_bindgen::prelude::*;
+use yew::prelude::*;
+use yew_agent::{Bridge, Bridged, Threaded};
 
 pub enum BoardMsg {
     Toggle(usize),
-    Change(usize, String),
+    Change(usize, Option<char>),
     RunWorker,
     WorkerMsg(WorkerOutput),
 }
@@ -19,7 +19,7 @@ pub enum BoardMsg {
 #[derive(Clone, Deserialize, Serialize)]
 pub struct BaseTileState {
     pub state: TileState,
-    pub entry: String,
+    pub entry: Option<char>,
 }
 
 pub struct Model {
@@ -27,7 +27,6 @@ pub struct Model {
     worker: Box<dyn Bridge<Worker>>,
     outputs: Vec<String>,
 }
-
 
 impl Component for Model {
     type Message = BoardMsg;
@@ -37,23 +36,23 @@ impl Component for Model {
         let tiles = vec![
             BaseTileState {
                 state: TileState::Absent,
-                entry: String::new(),
+                entry: None,
             },
             BaseTileState {
                 state: TileState::Absent,
-                entry: String::new(),
+                entry: None,
             },
             BaseTileState {
                 state: TileState::Absent,
-                entry: String::new(),
+                entry: None,
             },
             BaseTileState {
                 state: TileState::Absent,
-                entry: String::new(),
+                entry: None,
             },
             BaseTileState {
                 state: TileState::Absent,
-                entry: String::new(),
+                entry: None,
             },
         ];
 
@@ -76,17 +75,21 @@ impl Component for Model {
                 self.tiles[index].state = self.tiles[index].state.toggle();
                 ctx.link().send_message(BoardMsg::RunWorker);
                 true
-            },
+            }
             BoardMsg::Change(index, entry) => {
                 self.tiles[index].entry = entry;
                 ctx.link().send_message(BoardMsg::RunWorker);
                 true
             }
             BoardMsg::RunWorker => {
-                self.worker.send(WorkerInput { state: self.tiles.clone() });
+                self.worker.send(WorkerInput {
+                    boards: vec![Board {
+                        tiles: self.tiles.clone(),
+                    }],
+                });
                 false
             }
-            BoardMsg::WorkerMsg(WorkerOutput{ values }) => {
+            BoardMsg::WorkerMsg(WorkerOutput { values }) => {
                 self.outputs = values;
                 true
             }
@@ -104,7 +107,7 @@ impl Component for Model {
             .map(|(i, state)| {
                 let props = TileProps {
                     state: state.state,
-                    entry: state.entry,
+                    _entry: state.entry,
                     on_toggle: link.callback_once(move |_| BoardMsg::Toggle(i)),
                     on_change: link.callback_once(move |e| BoardMsg::Change(i, e)),
                 };
@@ -139,7 +142,6 @@ impl Component for Model {
 #[wasm_bindgen(start)]
 pub fn start() {
     use js_sys::{global, Reflect};
-
 
     if Reflect::has(&global(), &JsValue::from_str("window")).unwrap() {
         yew::start_app::<Model>();

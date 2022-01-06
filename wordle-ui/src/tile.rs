@@ -1,7 +1,7 @@
-use wasm_bindgen::JsCast;
-use yew::prelude::*;
-use web_sys::{EventTarget, HtmlInputElement};
 use serde::{Deserialize, Serialize};
+use wasm_bindgen::JsCast;
+use web_sys::{EventTarget, HtmlInputElement};
+use yew::prelude::*;
 
 pub struct Tile;
 
@@ -24,7 +24,7 @@ impl TileState {
 
 pub enum TileMsg {
     Toggle,
-    Change(String),
+    Change(Option<char>),
 }
 
 impl ToString for TileState {
@@ -40,14 +40,14 @@ impl ToString for TileState {
 #[derive(Properties)]
 pub struct TileProps {
     pub state: TileState,
-    pub entry: String,
+    pub _entry: Option<char>,
     pub on_toggle: Callback<()>,
-    pub on_change: Callback<String>,
+    pub on_change: Callback<Option<char>>,
 }
 
 impl PartialEq for TileProps {
     fn eq(&self, other: &Self) -> bool {
-        self.state.eq(&other.state) && self.entry.eq(&other.entry)
+        self.state.eq(&other.state) && self._entry.eq(&other._entry)
     }
 }
 
@@ -64,7 +64,7 @@ impl Component for Tile {
             TileMsg::Toggle => {
                 (ctx.props().on_toggle).emit(());
                 false
-            },
+            }
             TileMsg::Change(entry) => {
                 (ctx.props().on_change).emit(entry);
                 false
@@ -79,7 +79,7 @@ impl Component for Tile {
             let target: Option<EventTarget> = e.target();
 
             let input = target.and_then(|t| t.dyn_into::<HtmlInputElement>().ok());
-            input.map(|input| TileMsg::Change(input.value()))
+            input.map(|input| TileMsg::Change(input.value().chars().next()))
         });
 
         let max_length = if ctx.props().state == TileState::Correct {
@@ -93,7 +93,7 @@ impl Component for Tile {
                 <input
                     class="tile"
                     data-state={ ctx.props().state.to_string() }
-                    value={ ctx.props().entry.to_string() }
+                    value={ ctx.props()._entry.map(String::from).unwrap_or_else(String::new) }
                     onchange={ on_value_change }
                     maxlength={ max_length.to_string() }
                 />
