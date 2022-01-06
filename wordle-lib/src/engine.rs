@@ -65,8 +65,7 @@ fn lowercase_iter(w: &'static str) -> impl Iterator<Item = usize> {
 #[cfg(test)]
 mod tests {
     use super::Engine;
-    use crate::inference::InferenceKind;
-    use crate::{Inference, Overlap};
+    use crate::{Inference, InferenceKind, Overlap};
 
     #[test]
     fn inference_engine() {

@@ -45,8 +45,7 @@ impl Inference {
 
 #[cfg(test)]
 mod tests {
-    use super::Inference;
-    use crate::inference::InferenceKind;
+    use super::{Inference, InferenceKind};
 
     #[test]
     fn inference_filter_positive_partial() {
