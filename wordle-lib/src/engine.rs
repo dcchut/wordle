@@ -65,6 +65,7 @@ fn lowercase_iter(w: &'static str) -> impl Iterator<Item = usize> {
 #[cfg(test)]
 mod tests {
     use super::Engine;
+    use crate::inference::InferenceKind;
     use crate::{Inference, Overlap};
 
     #[test]
@@ -73,8 +74,7 @@ mod tests {
         let engine = Engine::<5>::new(words);
 
         // Filter out any words that don't have an `a` in them.
-        let words = engine.evaluate(&vec![Inference::new('a', true, 2, false)]);
-
+        let words = engine.evaluate(&vec![Inference::new('a', 2, InferenceKind::Present)]);
         assert_eq!(words.len(), 4);
 
         // Overlaps:
