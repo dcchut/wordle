@@ -3,4 +3,5 @@
 members = [
     "wordle-dict",
     "wordle-lib",
+    "wordle-ui",
 ]
