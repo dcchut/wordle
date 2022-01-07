@@ -122,6 +122,10 @@ impl Agent for Worker {
     }
 
     fn name_of_resource() -> &'static str {
-        "https://dcchut.github.io/wordle/wasm.js"
+        "wasm.js"
+    }
+
+    fn resource_path_is_relative() -> bool {
+        true
     }
 }
