@@ -23,7 +23,11 @@ pub struct Inference {
 
 impl Inference {
     pub fn new(c: char, position: usize, kind: InferenceKind) -> Self {
-        Self { c: c.to_ascii_lowercase(), position, kind }
+        Self {
+            c: c.to_ascii_lowercase(),
+            position,
+            kind,
+        }
     }
 
     pub fn char(&self) -> char {
@@ -31,19 +35,24 @@ impl Inference {
     }
 
     pub fn filter(&self, w: &'static str) -> bool {
-        let c = w
-            .chars()
-            .nth(self.position)
-            .unwrap()
-            .to_ascii_lowercase();
-
+        let c = w.chars().nth(self.position).unwrap().to_ascii_lowercase();
         match self.kind {
             InferenceKind::AbsentGlobal => !w.contains(self.c),
             InferenceKind::AbsentLocal => self.c != c,
             InferenceKind::Present => self.c != c && w.contains(self.c),
             InferenceKind::Correct => self.c == c,
-            InferenceKind::Count(n) => w.chars().filter(|&q| q == c).count() == n,
-            InferenceKind::AtLeast(n) => w.chars().filter(|&q| q == c).count() >= n,
+            InferenceKind::Count(n) => {
+                w.chars()
+                    .filter(|&q| q.to_ascii_lowercase() == self.c)
+                    .count()
+                    == n
+            }
+            InferenceKind::AtLeast(n) => {
+                w.chars()
+                    .filter(|&q| q.to_ascii_lowercase() == self.c)
+                    .count()
+                    >= n
+            }
         }
     }
 }
@@ -51,6 +60,15 @@ impl Inference {
 #[cfg(test)]
 mod tests {
     use super::{Inference, InferenceKind};
+
+    #[test]
+    fn inference_filter_at_least() {
+        let inference = Inference::new('u', 1, InferenceKind::AtLeast(2));
+
+        assert_eq!(inference.filter("TUUES"), true);
+        assert_eq!(inference.filter("trout"), false);
+        assert_eq!(inference.filter("tatou"), false);
+    }
 
     #[test]
     fn inference_filter_positive_partial() {

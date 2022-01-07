@@ -1,53 +1,29 @@
-use serde::{Deserialize, Serialize};
+use crate::model::TileMode;
 use wasm_bindgen::JsCast;
 use web_sys::{EventTarget, HtmlInputElement};
 use yew::prelude::*;
 
 pub struct Tile;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub enum TileState {
-    Correct,
-    Absent,
-    Present,
-}
-
-impl TileState {
-    pub fn toggle(self) -> Self {
-        match self {
-            TileState::Present => TileState::Correct,
-            TileState::Correct => TileState::Absent,
-            TileState::Absent => TileState::Present,
-        }
-    }
-}
-
 pub enum TileMsg {
     Toggle,
     Change(Option<char>),
 }
 
-impl ToString for TileState {
-    fn to_string(&self) -> String {
-        match self {
-            TileState::Correct => String::from("correct"),
-            TileState::Absent => String::from("absent"),
-            TileState::Present => String::from("present"),
-        }
-    }
-}
-
-#[derive(Properties)]
+#[derive(Debug, Properties)]
 pub struct TileProps {
-    pub state: TileState,
+    pub state: TileMode,
     pub _entry: Option<char>,
+    pub active: bool,
     pub on_toggle: Callback<()>,
     pub on_change: Callback<Option<char>>,
 }
 
 impl PartialEq for TileProps {
     fn eq(&self, other: &Self) -> bool {
-        self.state.eq(&other.state) && self._entry.eq(&other._entry)
+        self.state.eq(&other.state)
+            && self._entry.eq(&other._entry)
+            && self.active.eq(&other.active)
     }
 }
 
@@ -60,6 +36,10 @@ impl Component for Tile {
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
+        if !ctx.props().active {
+            return false;
+        }
+
         match msg {
             TileMsg::Toggle => {
                 (ctx.props().on_toggle).emit(());
@@ -82,10 +62,18 @@ impl Component for Tile {
             input.map(|input| TileMsg::Change(input.value().chars().next()))
         });
 
-        let max_length = if ctx.props().state == TileState::Correct {
+        let max_length = if ctx.props().state == TileMode::Correct {
             1
         } else {
             10
+        };
+
+        let button = if ctx.props().active {
+            html! {
+                <button class="toggle" onclick={link.callback(|_| TileMsg::Toggle)} tabindex="-1">{ "Toggle" }</button>
+            }
+        } else {
+            html! {}
         };
 
         html! {
@@ -96,8 +84,9 @@ impl Component for Tile {
                     value={ ctx.props()._entry.map(String::from).unwrap_or_else(String::new) }
                     onchange={ on_value_change }
                     maxlength={ max_length.to_string() }
+                    disabled= {!ctx.props().active }
                 />
-                <button class="toggle" onclick={link.callback(|_| TileMsg::Toggle)}>{ "Toggle" }</button>
+                { button }
             </div>
         }
     }

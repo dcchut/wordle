@@ -1,25 +1,19 @@
-use crate::tile::TileState;
-use crate::BaseTileState;
+use crate::model::{Board, TileMode};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use wordle_lib::{Engine, Inference, InferenceKind};
 use yew_agent::{Agent, AgentLink, HandlerId, Public};
 
-#[derive(Serialize, Deserialize)]
-pub struct Board {
-    pub tiles: Vec<BaseTileState>,
-}
-
 fn determine_inferences(boards: &[Board]) -> Vec<Inference> {
     let mut inferences = HashSet::new();
 
     for board in boards {
-        let mut states: HashMap<char, (Vec<usize>, Vec<usize>, Vec<usize>)> = HashMap::new();
+        let mut states = HashMap::new();
 
         for (i, tile) in board.tiles.iter().enumerate() {
-            if let Some(c) = tile.entry {
-                match tile.state {
-                    TileState::Correct => {
+            if let Some(c) = tile.char {
+                match tile.mode {
+                    TileMode::Correct => {
                         inferences.insert(Inference::new(c, i, InferenceKind::Correct));
                         states
                             .entry(c)
@@ -27,7 +21,7 @@ fn determine_inferences(boards: &[Board]) -> Vec<Inference> {
                             .0
                             .push(i);
                     }
-                    TileState::Present => {
+                    TileMode::Present => {
                         inferences.insert(Inference::new(c, i, InferenceKind::Present));
                         states
                             .entry(c)
@@ -35,7 +29,7 @@ fn determine_inferences(boards: &[Board]) -> Vec<Inference> {
                             .1
                             .push(i);
                     }
-                    TileState::Absent => {
+                    TileMode::Absent => {
                         inferences.insert(Inference::new(c, i, InferenceKind::AbsentLocal));
                         states
                             .entry(c)

@@ -1,10 +1,12 @@
+mod model;
 mod tile;
 mod worker;
 
+use crate::model::TileMode;
 use crate::tile::TileProps;
-use crate::worker::{Board, Worker, WorkerInput, WorkerOutput};
-use serde::{Deserialize, Serialize};
-use tile::{Tile, TileState};
+use crate::worker::{Worker, WorkerInput, WorkerOutput};
+use model::Board;
+use tile::Tile;
 use wasm_bindgen::prelude::*;
 use yew::prelude::*;
 use yew_agent::{Bridge, Bridged, Threaded};
@@ -12,18 +14,13 @@ use yew_agent::{Bridge, Bridged, Threaded};
 pub enum BoardMsg {
     Toggle(usize),
     Change(usize, Option<char>),
+    AddBoard,
     RunWorker,
     WorkerMsg(WorkerOutput),
 }
 
-#[derive(Clone, Deserialize, Serialize)]
-pub struct BaseTileState {
-    pub state: TileState,
-    pub entry: Option<char>,
-}
-
 pub struct Model {
-    tiles: Vec<BaseTileState>,
+    boards: Vec<Board>,
     worker: Box<dyn Bridge<Worker>>,
     outputs: Vec<String>,
 }
@@ -33,29 +30,7 @@ impl Component for Model {
     type Properties = ();
 
     fn create(ctx: &Context<Self>) -> Self {
-        let tiles = vec![
-            BaseTileState {
-                state: TileState::Absent,
-                entry: None,
-            },
-            BaseTileState {
-                state: TileState::Absent,
-                entry: None,
-            },
-            BaseTileState {
-                state: TileState::Absent,
-                entry: None,
-            },
-            BaseTileState {
-                state: TileState::Absent,
-                entry: None,
-            },
-            BaseTileState {
-                state: TileState::Absent,
-                entry: None,
-            },
-        ];
-
+        let boards = vec![Board::default()];
         let cb = {
             let link = ctx.link().clone();
             Callback::from(move |e| link.send_message(Self::Message::WorkerMsg(e)))
@@ -63,7 +38,7 @@ impl Component for Model {
         let worker = Worker::bridge(cb);
 
         Self {
-            tiles,
+            boards,
             worker,
             outputs: Vec::new(),
         }
@@ -72,20 +47,38 @@ impl Component for Model {
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             BoardMsg::Toggle(index) => {
-                self.tiles[index].state = self.tiles[index].state.toggle();
+                let mode = self.boards[self.boards.len() - 1].tiles[index]
+                    .mode
+                    .toggle();
+                self.boards.last_mut().unwrap().tiles[index].mode = mode;
                 ctx.link().send_message(BoardMsg::RunWorker);
                 true
             }
             BoardMsg::Change(index, entry) => {
-                self.tiles[index].entry = entry;
+                self.boards.last_mut().unwrap().tiles[index].char = entry;
                 ctx.link().send_message(BoardMsg::RunWorker);
                 true
             }
+            BoardMsg::AddBoard => {
+                // Can only add a board if the last board is filled.
+                if let Some(mut last) = self.boards.last().cloned() {
+                    if last.tiles.iter().all(|tile| tile.char.is_some()) {
+                        // Replace all the non-correct tiles with emptyness.
+                        for tile_state in &mut last.tiles {
+                            if tile_state.mode != TileMode::Correct {
+                                tile_state.char = None;
+                                tile_state.mode = TileMode::Absent;
+                            }
+                        }
+                        self.boards.push(last);
+                        return true;
+                    }
+                }
+                false
+            }
             BoardMsg::RunWorker => {
                 self.worker.send(WorkerInput {
-                    boards: vec![Board {
-                        tiles: self.tiles.clone(),
-                    }],
+                    boards: self.boards.clone(),
                 });
                 false
             }
@@ -99,22 +92,40 @@ impl Component for Model {
     fn view(&self, ctx: &Context<Self>) -> Html {
         let link = ctx.link();
 
-        let tiles = self
-            .tiles
-            .clone()
-            .into_iter()
-            .enumerate()
-            .map(|(i, state)| {
-                let props = TileProps {
-                    state: state.state,
-                    _entry: state.entry,
-                    on_toggle: link.callback_once(move |_| BoardMsg::Toggle(i)),
-                    on_change: link.callback_once(move |e| BoardMsg::Change(i, e)),
-                };
-                html! {
-                    <Tile ..props />
-                }
-            });
+        let mut tiles = Vec::new();
+
+        // Split out the last board from the rest.
+        let (last, boards) = self.boards.split_last().unwrap();
+        for tile_state in boards.iter().map(|b| &b.tiles).flatten() {
+            let props = TileProps {
+                state: tile_state.mode,
+                _entry: tile_state.char,
+                active: false,
+                // this should be an enum or something to represent this properly
+                on_toggle: link.callback_once(|_| BoardMsg::Toggle(0)),
+                on_change: link.callback_once(|_| BoardMsg::Change(0, None)),
+            };
+            tiles.push(html! { <Tile ..props />});
+        }
+
+        for (i, tile_state) in last.tiles.iter().enumerate() {
+            let active = if self.boards.len() > 1
+                && self.boards[self.boards.len() - 2].tiles[i].mode == TileMode::Correct
+            {
+                false
+            } else {
+                true
+            };
+
+            let props = TileProps {
+                state: tile_state.mode,
+                _entry: tile_state.char,
+                active,
+                on_toggle: link.callback_once(move |_| BoardMsg::Toggle(i)),
+                on_change: link.callback_once(move |e| BoardMsg::Change(i, e)),
+            };
+            tiles.push(html! { <Tile ..props />});
+        }
 
         let outputs = self.outputs.clone();
 
@@ -124,6 +135,9 @@ impl Component for Model {
                     <div class="board">
                         { for tiles.into_iter() }
                     </div>
+                </div>
+                <div>
+                    <button onclick={link.callback(|_| BoardMsg::AddBoard)}>{ "Next" }</button>
                 </div>
                 <ul class="item-list">
                     {
